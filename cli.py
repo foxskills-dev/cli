@@ -71,7 +71,7 @@ def build_challenge_image(challenge_name):
     repo_url = get_repo_url(challenge_name)
     last_hash = get_last_commit_hash(get_repo_url(challenge_name))
     print("[ ! ] Building challenge image...")
-    subprocess.run(["docker", "compose", "build"], cwd=f".build-context/{challenge_name}", check=True, env={
+    subprocess.run(["docker", "compose", "build", "--no-cache"], cwd=f".build-context/{challenge_name}", check=True, env={
         "IMAGE_NAME": f"chall_{challenge_name}-{last_hash}",
         "ARGS": "",
         "RUNNER_CONFIG": json.dumps({
@@ -85,7 +85,7 @@ def create_challenge_image(challenge_name):
     create_build_context(challenge_name)
     build_challenge_image(challenge_name)
 
-def run_challenge_runner(challenge_name, user_challenge_repo):
+def run_challenge_runner(challenge_name, user_challenge_repo, startup_command):
     if not repo_exists(user_challenge_repo) and not repo_exists(get_repo_url(challenge_name)):
         return False
 
@@ -93,17 +93,18 @@ def run_challenge_runner(challenge_name, user_challenge_repo):
         create_challenge_image(challenge_name)
 
     last_hash = get_last_commit_hash(get_repo_url(challenge_name))
-    args = [user_challenge_repo, "None", "http://192.168.1.71:8080", "123", "321"]
+    # User challenge repo, Startup command, Runner url, Task ID, Secret
+    args = [user_challenge_repo, startup_command, "http://192.168.1.71:8080", "123", "321"]
     print("[ ! ] Running challenge runner...")
     subprocess.run(["docker", "compose", "up", "-d"], cwd=f".build-context/{challenge_name}", check=True, env={ #, "-d"
         "IMAGE_NAME": f"chall_{challenge_name}-{last_hash}",
-        "ARGS": " ".join(args)
+        "ARGS": " ".join([ f'"{arg}"' for arg in args ])
     })
 
-    print("[ ! ] Waiting for challenge runner to start...")
+    print("[ ! ] Waiting for challenge runner to send results...")
     path, body = receive_post_request()
 
-    json.dump(json.loads(body), open("result.json", "w"), indent=4)
+    print(json.dumps(json.loads(body), indent=4))
 
     print("[ ! ] Stopping challenge runner...")
     subprocess.run(["docker", "compose", "down"], cwd=f".build-context/{challenge_name}", check=True, env={
@@ -147,11 +148,13 @@ def main():
         
         challenge_name = sys.argv[2]
         user_challenge_repo = sys.argv[3]
+        startup_command = sys.argv[4]
 
         print("Running challenge runner...")
         print(f"Challenge name: {challenge_name}")
         print(f"User challenge repo: {user_challenge_repo}")
-        run_challenge_runner(challenge_name, user_challenge_repo)
+        print(f"Startup command: {startup_command}")
+        run_challenge_runner(challenge_name, user_challenge_repo, startup_command)
     
     elif action == "init":
         challenge_name = sys.argv[2]
