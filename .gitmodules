@@ -1,3 +1,4 @@
 [submodule "fs_lib"]
 	path = fs_lib
 	url = https://github.com/foxskills-dev/fs-lib
+	branch = main
