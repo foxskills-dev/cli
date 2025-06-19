@@ -1,6 +1,7 @@
 # 🦊 FoxSkills CLI
 
-This CLI will help you to make the link between your developpement environement and FoxSkills. You will also be able to start local projects and tests without any interractions with the FoxSkills website.
+This CLI helps bridge your development environment with [FoxSkills](https://foxskills.dev).  
+It allows you to initialize local projects and run tests without interacting directly with the FoxSkills website.
 
 ## Installation
 
@@ -9,7 +10,7 @@ git clone https://github.com/foxskills-dev/cli.git
 cd cli/
 python3 -m venv venv
 . venv/bin/activate
-# This will be changed to a requirements.txt later
+# Will be replaced with a requirements.txt soon
 pip install docker
 ```
 
@@ -23,10 +24,11 @@ python3 cli.py <action> [...args]
 
 ```bash
 python3 cli.py init <challenge-name> <user-repo>
+# Example:
 python3 cli.py init helloworld https://github.com/zalo-alex/helloworld-test
 ```
 
-### Test local project
+### Test the local project
 
 ```bash
 cd <project-name>/
@@ -38,6 +40,8 @@ pytest tests.py -v
 
 ```bash
 python3 cli.py verify <challenge-name> <user-repo> <startup-command>
+# Example with startup command:
 python3 cli.py verify helloworld https://github.com/zalo-alex/helloworld-test "pip install -r requirements.txt --b && python3 app/app.py"
+# Example without startup command:
 python3 cli.py verify helloworld https://github.com/zalo-alex/helloworld-test None
 ```
