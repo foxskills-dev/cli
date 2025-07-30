@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import docker
 import re
 import shutil
@@ -6,9 +8,22 @@ import os
 import sys
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 try: client = docker.from_env()
 except: client = None
+
+CONFIG_PATH = Path.home() / ".foxskills-cli.conf"
+
+def load_config():
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_config(config):
+    with open(CONFIG_PATH, "w") as f:
+        json.dump(config, f)
 
 def receive_post_request():
     result = {"path": None, "body": None}
@@ -89,12 +104,15 @@ def run_challenge_runner(challenge_name, user_challenge_repo, startup_command):
     if not repo_exists(user_challenge_repo) and not repo_exists(get_repo_url(challenge_name)):
         return False
 
-    if not is_image_up_to_date(challenge_name) or True:
+    if not is_image_up_to_date(challenge_name) or True: # "or True" will force rebuild
         create_challenge_image(challenge_name)
 
     last_hash = get_last_commit_hash(get_repo_url(challenge_name))
+
+    config = load_config()
+    github_token_user_challenge_repo = user_challenge_repo.replace("https://github.com/", f"https://{config['github_token']}@github.com/")
     # User challenge repo, Startup command, Runner url, Task ID, Secret
-    args = [user_challenge_repo, startup_command, "http://192.168.1.71:8080", "123", "321"]
+    args = [github_token_user_challenge_repo, startup_command, "http://192.168.1.70:8080", "123", "321"]
     print("[ ! ] Running challenge runner...")
     subprocess.run(["docker", "compose", "up", "-d"], cwd=f".build-context/{challenge_name}", check=True, env={ #, "-d"
         "IMAGE_NAME": f"chall_{challenge_name}-{last_hash}",
@@ -139,6 +157,10 @@ def init_user_challenge_repo(challenge_name, user_challenge_repo):
     subprocess.run([folder + "/venv/bin/python3", "-m", "pip", "install", "-r", folder + "/fs_lib/build/requirements.txt"], check=True)
 
 def main():
+    if len(sys.argv) < 2:
+        print("Usage: python3 cli.py {verify,config,init}")
+        return
+
     action = sys.argv[1]
 
     if action == "verify":
@@ -164,6 +186,21 @@ def main():
         print(f"Challenge name: {challenge_name}")
         print(f"User challenge repo: {user_challenge_repo}")
         init_user_challenge_repo(challenge_name, user_challenge_repo)
+    
+    elif action == "config":
+        key = sys.argv[2]
+        value = sys.argv[3]
+
+        keys = ["github_token"]
+        if key not in keys:
+            print("Invalid key. Valid keys: " + ", ".join(keys))
+            return
+
+        config = load_config()
+        config[key] = value
+        save_config(config)
+
+        print(f"{key} configured: {value}")
 
 if __name__ == "__main__":
     main()

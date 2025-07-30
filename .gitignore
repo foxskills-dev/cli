@@ -1,4 +1,7 @@
 helloworld/
+vault/
+
 fs_lib/
 .build-context/
+.pytest_cache
 venv/
